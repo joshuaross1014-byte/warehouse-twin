@@ -224,9 +224,52 @@ class WarehouseSim:
         }
 
 
-def run_scenario(params: SimParams, overrides: dict | None = None) -> dict:
-    """One-call API: apply overrides, run a day, return the KPI report.
-    This is the function the AI copilot layer wraps as a tool."""
+def run_scenario(params: SimParams, overrides: dict | None = None,
+                 replications: int = 1) -> dict:
+    """One-call API: apply overrides, run the day, return the KPI report.
+    This is the function the AI copilot layer wraps as a tool.
+
+    replications > 1 runs the same scenario under different random seeds and
+    returns mean +/- stdev for the headline KPIs — variance-aware answers
+    instead of single-draw anecdotes."""
     if overrides:
         params = params.with_overrides(overrides)
-    return WarehouseSim(params).run()
+    if replications <= 1:
+        return WarehouseSim(params).run()
+
+    reports = []
+    for i in range(replications):
+        p_i = params.with_overrides({"random_seed": params.random_seed + i})
+        reports.append(WarehouseSim(p_i).run())
+    return _aggregate(reports)
+
+
+def _aggregate(reports: list[dict]) -> dict:
+    """Mean +/- stdev across replication reports (headline scalars + zones)."""
+    def stat(values):
+        vals = [v for v in values if v is not None]
+        if not vals:
+            return None
+        m = statistics.mean(vals)
+        s = statistics.stdev(vals) if len(vals) > 1 else 0.0
+        return {"mean": round(m, 1), "stdev": round(s, 1)}
+
+    zones = {}
+    for zname in reports[0]["zones"]:
+        zones[zname] = {
+            "pickers": reports[0]["zones"][zname]["pickers"],
+            "utilization_pct": stat([r["zones"][zname]["utilization_pct"] for r in reports]),
+            "queue_remaining": stat([r["zones"][zname]["queue_remaining"] for r in reports]),
+            "lines_picked": stat([r["zones"][zname]["lines_picked"] for r in reports]),
+        }
+    return {
+        "site": reports[0]["site"],
+        "replications": len(reports),
+        "orders_arrived": stat([r["orders"]["arrived"] for r in reports]),
+        "completion_pct": stat([r["orders"]["completion_pct"] for r in reports]),
+        "on_time_pct": stat([r["service_level"]["on_time_pct"] for r in reports]),
+        "cycle_avg_min": stat([r["cycle_time_min"]["arrival_to_complete_avg"] for r in reports]),
+        "cycle_p90_min": stat([r["cycle_time_min"]["arrival_to_complete_p90"] for r in reports]),
+        "waves_released": stat([r["waves_released"] for r in reports]),
+        "zones": zones,
+    }
