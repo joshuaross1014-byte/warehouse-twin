@@ -72,6 +72,7 @@ All shipped values are rounded/representative — no proprietary data.
 ```bash
 python run_demo.py               # baseline vs +2 frozen pickers
 python run_demo.py --growth 20   # baseline vs +20% order volume
+python make_dashboard.py         # scenario dashboard -> docs/dashboard.html
 ```
 
 Python 3.10+, stdlib only (the MCP copilot layer needs `pip install mcp`).
@@ -110,7 +111,10 @@ claude mcp add warehouse_twin -s user -- python /path/to/twin_mcp_server.py
       anchored at calibration coverage, so gains are relative to today). Finding: re-slotting
       FROZEN 0.5 -> 0.85 halves its end-of-day queue and cuts cycle ~9 min for zero headcount —
       but at 92% utilization it delays the extra hire rather than replacing it
-- [ ] Browser dashboard with live scenario comparison
+- [x] **Browser dashboard** — `python make_dashboard.py` runs the standard scenario set and
+      emits a self-contained `docs/dashboard.html` (no dependencies, no CDN): stat tiles, the
+      empirical arrival curve, small-multiple KPI panels, zone-utilization comparison, hover
+      tooltips with mean ± stdev, dark mode, and a full table view
 
 ## Author
 
