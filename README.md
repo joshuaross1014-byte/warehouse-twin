@@ -74,14 +74,26 @@ python run_demo.py               # baseline vs +2 frozen pickers
 python run_demo.py --growth 20   # baseline vs +20% order volume
 ```
 
-Python 3.10+, stdlib only.
+Python 3.10+, stdlib only (the MCP copilot layer needs `pip install mcp`).
+
+**AI copilot:** register the twin with an MCP client (e.g. Claude Code) and ask questions
+in plain English — the assistant composes the experiments itself:
+
+```bash
+claude mcp add warehouse_twin -s user -- python /path/to/twin_mcp_server.py
+# then: "How many frozen pickers do we need if volume grows 30%?"
+```
 
 ## Roadmap
 
 - [x] v0.1 — DES core, empirical grounding, scenario overrides, two-scenario demo
-- [ ] **AI copilot** — expose `run_scenario` as an MCP tool so an AI assistant designs and
-      runs experiments conversationally ("find the picker mix that survives +30% volume")
-- [ ] Multi-day runs, order carryover, and replication (confidence intervals)
+- [x] **Replication** — `run_scenario(replications=N)` returns mean ± stdev across seeds
+- [x] **AI copilot (v1)** — MCP server (`twin_mcp_server.py`) exposing `describe_twin`,
+      `run_twin_scenario`, `compare_twin_scenarios`, and `sweep_twin_parameter`, so an AI
+      assistant designs and runs experiments conversationally. First real result: sweeping
+      FROZEN pickers 1→2→3 shows 2 is optimal (109→78→81 min avg cycle) — the third picker
+      buys nothing because the bottleneck moves.
+- [ ] Multi-day runs and order carryover
 - [ ] Automation modules: model a GTP/AMR zone (rate, capex) → payback analysis
 - [ ] Waveless / order-streaming release mode (compare against wave-based)
 - [ ] Slotting module: zone-share shifts from re-slotting decisions
